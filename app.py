@@ -5,10 +5,11 @@ import math
 import sys
 from threading import Thread, enumerate
 from queue import Queue
+import string
 
 darknet_image_queue = Queue(maxsize=1)
 
-config_file = '/app/data/yolov4.cfg'
+config_file = '/app/cfg/yolov4.cfg'
 data_file = '/app/data/coco.data'
 weights = '/data/yolov4.weights'
 
@@ -25,6 +26,12 @@ cap = cv2.VideoCapture(input_path)
 frameRate = cap.get(cv2.CAP_PROP_FPS)
 print('frame rate is {}'.format(frameRate))
 
+def get_object_names(detections):
+    names = []
+    for name, prob, coord in detections:
+        names.append(name)
+    return ','.join(names)
+
 
 def inference(darknet_image_queue):
     prev_objects = 0
@@ -37,8 +44,9 @@ def inference(darknet_image_queue):
         prev_objects = len(detections)
         ts = int(ts / 1000)
         frameId = int(frameId)
-        print('objects: {:<4} diff: {:<3} frame: {:04d} sec: {:04d}'.format(
-            len(detections), delta_objects, frameId, ts))
+        names = get_object_names(detections)
+        print('objects: {:<4} diff: {:<3} frame: {:04d} sec: {:04d} names: {}'.format(
+            len(detections), delta_objects, frameId, ts, names))
         # fps = int(1/(time.time() - prev_time))
         # fps = 1/(time.time() - prev_time)
         # print("FPS: {}".format(fps))
