@@ -9,7 +9,7 @@ import string
 
 darknet_image_queue = Queue(maxsize=1)
 
-config_file = '/app/cfg/yolov4.cfg'
+config_file = '/app/data/yolov4.cfg'
 data_file = '/app/data/coco.data'
 weights = '/data/yolov4.weights'
 
@@ -23,8 +23,6 @@ darknet_image = darknet.make_image(width, height, 3)
 input_path = sys.argv[1]
 cap = cv2.VideoCapture(input_path)
 
-frameRate = cap.get(cv2.CAP_PROP_FPS)
-print('frame rate is {}'.format(frameRate))
 
 def get_object_names(detections):
     names = []
@@ -35,18 +33,20 @@ def get_object_names(detections):
 
 def inference(darknet_image_queue):
     prev_objects = 0
-    while cap.isOpened():
-        frameId, ts, darknet_image = darknet_image_queue.get()  # 비어있는 경우 대기상태
+    if not cap.isOpened():
+        return
+    while True:
+        frame_id, ts, darknet_image = darknet_image_queue.get()  # 비어있는 경우 대기상태
         # prev_time = time.time()
         detections = darknet.detect_image(network, class_names, darknet_image)
         delta_objects = len(detections) - prev_objects
         delta_objects = delta_objects * delta_objects
         prev_objects = len(detections)
         ts = int(ts / 1000)
-        frameId = int(frameId)
+        frame_id = int(frame_id)
         names = get_object_names(detections)
         print('objects: {:<4} diff: {:<3} frame: {:04d} sec: {:04d} names: {}'.format(
-            len(detections), delta_objects, frameId, ts, names))
+            len(detections), delta_objects, frame_id, ts, names))
         # fps = int(1/(time.time() - prev_time))
         # fps = 1/(time.time() - prev_time)
         # print("FPS: {}".format(fps))
@@ -55,12 +55,18 @@ def inference(darknet_image_queue):
 
 
 def video_capture(darknet_image_queue):
-    while cap.isOpened():
-        frameId = cap.get(cv2.CAP_PROP_POS_FRAMES)
+    if not cap.isOpened():
+        return
+    frame_rate = cap.get(cv2.CAP_PROP_FPS)
+    while True:
+        # frame_id % frame_rate == 0 이므로
+        # frame id가 0부터 시작하기 위해 read 앞에서 호출
+        # frmae id가 1부터 시작하면 1 건너뛰고 2초 부터 시작할 걸로
+        frame_id = cap.get(cv2.CAP_PROP_POS_FRAMES)
         ret, frame = cap.read()
         if not ret:
             break
-        if frameId % math.floor(frameRate) == 0:
+        if frame_id % frame_rate == 0:
             ts = cap.get(cv2.CAP_PROP_POS_MSEC)
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             frame_resized = cv2.resize(frame_rgb, (width, height),
@@ -68,7 +74,7 @@ def video_capture(darknet_image_queue):
             img_for_detect = darknet.make_image(width, height, 3)
             darknet.copy_image_from_bytes(
                 img_for_detect, frame_resized.tobytes())
-            darknet_image_queue.put((frameId, ts, img_for_detect))
+            darknet_image_queue.put((frame_id, ts, img_for_detect))
     cap.release()
 
 
