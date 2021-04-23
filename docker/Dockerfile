@@ -1,7 +1,8 @@
 # Build image
 FROM ubuntu:18.04 AS build
-RUN apt-get update
-RUN apt-get install -y build-essential git
+RUN sed -i 's/archive.ubuntu.com/mirror.kakao.com/g' /etc/apt/sources.list
+RUN apt-get update && \
+    apt-get install -y build-essential git
 
 # Get and compile darknet
 WORKDIR /src
@@ -19,6 +20,7 @@ RUN sed -i -e "s!OPENMP=0!OPENMP=1!g" Makefile && \
 FROM ubuntu:18.04
 
 # Bare-bones python install
+RUN sed -i 's/archive.ubuntu.com/mirror.kakao.com/g' /etc/apt/sources.list
 RUN apt-get update && \
     apt-get install -y libgomp1 wget && \
     apt-get install -y --no-install-recommends python3-pip && \
