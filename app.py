@@ -7,18 +7,13 @@ from threading import Thread
 from queue import Queue
 from ctypes import pointer, c_int
 from collections import deque
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 single_image_queue = Queue(maxsize=1)
 series_queue = deque([(0, 0, 0, 0) for i in range(30)], maxlen=30)
 
-<< << << < HEAD
-config_file = '/app/data/yolov4.cfg'
-data_file = '/app/data/coco.data'
-== == == =
 config_file = '/app/cfg/yolov4.cfg'
 data_file = '/app/cfg/coco.data'
->>>>>> > f8fe1892fa7b96f5180a2c23d9c38a3e3f800d52
 weights = '/data/yolov4.weights'
 
 network, class_names, class_colors = darknet.load_network(
@@ -37,14 +32,16 @@ hier_thresh = .5
 
 
 def series(series_queue):
-    plt.xticks(range(30))
+    # plt.xticks(range(30))
     while cap.isOpened():
-        time.sleep(5)
-        series = list(series_queue)
-        series = [(ts, bal) for num, bal, fr, ts in series]
-        #print('draw series {} ...'.format(*zip(*series)))
-        plt.plot(*zip(*series))
-        plt.savefig("/data/mygraph.png")
+        pass
+        # print(list(series_queue))
+        # time.sleep(5)
+        # series = list(series_queue)
+        # series = [(ts, bal) for num, bal, fr, ts in series]
+        # #print('draw series {} ...'.format(*zip(*series)))
+        # plt.plot(*zip(*series))
+        # plt.savefig("/data/mygraph.png")
     cap.release()
 
 
@@ -85,12 +82,13 @@ def inference(single_image_queue, series_queue):
 
 
 def video_capture(single_image_queue):
+    frame_rate = cap.get(cv2.CAP_PROP_FPS)
     while cap.isOpened():
         frame_id = cap.get(cv2.CAP_PROP_POS_FRAMES)
         ret, frame = cap.read()
         if not ret:
             break
-        if frame_id % math.floor(frameRate) == 0:
+        if frame_id % math.floor(frame_rate) == 0:
             ts = cap.get(cv2.CAP_PROP_POS_MSEC)
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             frame_resized = cv2.resize(frame_rgb, (width, height),
