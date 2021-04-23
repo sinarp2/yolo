@@ -3,14 +3,22 @@ import darknet
 import time
 import math
 import sys
-from threading import Thread, enumerate
+from threading import Thread
 from queue import Queue
-import string
+from ctypes import pointer, c_int
+from collections import deque
+import matplotlib.pyplot as plt
 
-darknet_image_queue = Queue(maxsize=1)
+single_image_queue = Queue(maxsize=1)
+series_queue = deque([(0,0,0,0) for i in range(30)], maxlen = 30)
 
+<<<<<<< HEAD
 config_file = '/app/data/yolov4.cfg'
 data_file = '/app/data/coco.data'
+=======
+config_file = '/app/cfg/yolov4.cfg'
+data_file = '/app/cfg/coco.data'
+>>>>>>> f8fe1892fa7b96f5180a2c23d9c38a3e3f800d52
 weights = '/data/yolov4.weights'
 
 network, class_names, class_colors = darknet.load_network(
@@ -24,15 +32,23 @@ input_path = sys.argv[1]
 cap = cv2.VideoCapture(input_path)
 
 
-def get_object_names(detections):
-    names = []
-    for name, prob, coord in detections:
-        names.append(name)
-    return ','.join(names)
+thresh = .5
+hier_thresh = .5
 
-
-def inference(darknet_image_queue):
+def series(series_queue):
+    plt.xticks(range(30))
+    while cap.isOpened():
+        time.sleep(5)
+        series = list(series_queue)
+        series = [(ts, bal) for num, bal, fr, ts in series]
+        #print('draw series {} ...'.format(*zip(*series)))
+        plt.plot(*zip(*series))
+        plt.savefig("/data/mygraph.png")
+    cap.release()
+        
+def inference(single_image_queue, series_queue):
     prev_objects = 0
+<<<<<<< HEAD
     if not cap.isOpened():
         return
     while True:
@@ -47,12 +63,40 @@ def inference(darknet_image_queue):
         names = get_object_names(detections)
         print('objects: {:<4} diff: {:<3} frame: {:04d} sec: {:04d} names: {}'.format(
             len(detections), delta_objects, frame_id, ts, names))
+=======
+    sqt = lambda x: x * x
+    while cap.isOpened():
+        frame_id, ts, image = single_image_queue.get() # 비어있는 경우 대기상태
+        # prev_time = time.time()
+        darknet.predict_image(network, image)
+        pnum = pointer(c_int(0))
+        detections = darknet.get_network_boxes(network, image.w, image.h,
+                                   thresh, hier_thresh, None, 0, pnum, 0)
+        num = pnum[0]
+        #detections = darknet.detect_image(network, class_names, darknet_image)
+        predictions = []
+        for j in range(num):
+            for idx, label in enumerate(class_names):
+                if detections[j].prob[idx] > 0:
+                    predictions.append((label, str(round(detections[j].prob[idx] * 100, 2))))
+        if frame_id > 0:
+            curr_objects = len(predictions)
+            balance = curr_objects - prev_objects
+            prev_objects = curr_objects
+            ts = int(ts / 1000)
+            frame_id = int(frame_id)
+            print('objects: {:<4} diff: {:<4} frame: {:<6} sec: {:<3}'.format(curr_objects, sqt(balance), frame_id, ts))
+            series_queue.append((curr_objects, sqt(balance), frame_id, ts))
+        
+>>>>>>> f8fe1892fa7b96f5180a2c23d9c38a3e3f800d52
         # fps = int(1/(time.time() - prev_time))
-        # fps = 1/(time.time() - prev_time)
+        #fps = 1/(time.time() - prev_time)
         # print("FPS: {}".format(fps))
-        darknet.free_image(darknet_image)
+        darknet.free_detections(detections, num)
+        darknet.free_image(image)
     cap.release()
 
+<<<<<<< HEAD
 
 def video_capture(darknet_image_queue):
     if not cap.isOpened():
@@ -62,21 +106,34 @@ def video_capture(darknet_image_queue):
         # frame_id % frame_rate == 0 이므로
         # frame id가 0부터 시작하기 위해 read 앞에서 호출
         # frmae id가 1부터 시작하면 1 건너뛰고 2초 부터 시작할 걸로
+=======
+def video_capture(single_image_queue):
+    while cap.isOpened():
+>>>>>>> f8fe1892fa7b96f5180a2c23d9c38a3e3f800d52
         frame_id = cap.get(cv2.CAP_PROP_POS_FRAMES)
         ret, frame = cap.read()
         if not ret:
             break
+<<<<<<< HEAD
         if frame_id % frame_rate == 0:
+=======
+        if frame_id % math.floor(frameRate) == 0:
+>>>>>>> f8fe1892fa7b96f5180a2c23d9c38a3e3f800d52
             ts = cap.get(cv2.CAP_PROP_POS_MSEC)
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             frame_resized = cv2.resize(frame_rgb, (width, height),
-                                       interpolation=cv2.INTER_LINEAR)
+                                    interpolation=cv2.INTER_LINEAR)
             img_for_detect = darknet.make_image(width, height, 3)
+<<<<<<< HEAD
             darknet.copy_image_from_bytes(
                 img_for_detect, frame_resized.tobytes())
             darknet_image_queue.put((frame_id, ts, img_for_detect))
+=======
+            darknet.copy_image_from_bytes(img_for_detect, frame_resized.tobytes())
+            single_image_queue.put((frame_id, ts, img_for_detect))
+>>>>>>> f8fe1892fa7b96f5180a2c23d9c38a3e3f800d52
     cap.release()
 
-
-Thread(target=video_capture, args=(darknet_image_queue,)).start()
-Thread(target=inference, args=(darknet_image_queue,)).start()
+Thread(target=video_capture, args=(single_image_queue,)).start()
+Thread(target=inference, args=(single_image_queue, series_queue)).start()
+Thread(target=series, args=(series_queue,)).start()

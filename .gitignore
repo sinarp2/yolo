@@ -130,4 +130,11 @@ dmypy.json
 
 *.weights
 *.mp4
+<<<<<<< HEAD
 *.m4v
+=======
+*.mov
+*.png
+
+.DS_Store
+>>>>>>> f8fe1892fa7b96f5180a2c23d9c38a3e3f800d52
