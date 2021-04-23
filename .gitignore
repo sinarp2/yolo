@@ -131,3 +131,6 @@ dmypy.json
 *.weights
 *.mp4
 *.mov
+*.png
+
+.DS_Store
