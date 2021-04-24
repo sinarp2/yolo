@@ -48,8 +48,9 @@ def series(series_queue):
 def inference(single_image_queue, series_queue):
     prev_objects = 0
     def sqt(x): return x * x
+    def log(x): return x if x == 0 else math.log(sqt(x))
     while cap.isOpened():
-        frame_id, ts, image = single_image_queue.get()  # 비어있는 경우 대기상태
+        frame_id, image = single_image_queue.get()  # 비어있는 경우 대기상태
         # prev_time = time.time()
         darknet.predict_image(network, image)
         pnum = pointer(c_int(0))
@@ -63,15 +64,19 @@ def inference(single_image_queue, series_queue):
                 if detections[j].prob[idx] > 0:
                     predictions.append(
                         (label, str(round(detections[j].prob[idx] * 100, 2))))
-        if frame_id > 0:
-            curr_objects = len(predictions)
-            balance = curr_objects - prev_objects
-            prev_objects = curr_objects
-            ts = int(ts / 1000)
-            frame_id = int(frame_id)
-            print('objects: {:<4} diff: {:<4} frame: {:<6} sec: {:<3}'.format(
-                curr_objects, sqt(balance), frame_id, ts))
-            series_queue.append((curr_objects, sqt(balance), frame_id, ts))
+        # 이전 객체 개 수와 비교
+        curr_objects = len(predictions)
+        balance = curr_objects - prev_objects
+        prev_objects = curr_objects
+        if frame_id == 0:
+            # 첫 프레임은 비교 대상이 없으므로 스킵
+            continue
+        # ts = int(ts / 1000)
+        # ts = ts / 1000.0
+        frame_id = int(frame_id)
+        print('frame: {:<4} objects: {:<4} diff: {:<4}'.format(
+            frame_id, curr_objects, log(balance)))
+        series_queue.append((curr_objects, log(balance), frame_id))
 
         # fps = int(1/(time.time() - prev_time))
         #fps = 1/(time.time() - prev_time)
@@ -83,20 +88,25 @@ def inference(single_image_queue, series_queue):
 
 def video_capture(single_image_queue):
     frame_rate = cap.get(cv2.CAP_PROP_FPS)
+    frame_rate = frame_rate / 3
     while cap.isOpened():
+        # 프레임을 읽기 전 프레임 위치는 -> 0
+        # 프레임을 읽고 난 후 프레임 위치는 -> 1
+        # if frame_id % math.floor(frame_rate) == 0 조건을 위해  프레임을 0 부터 시작
         frame_id = cap.get(cv2.CAP_PROP_POS_FRAMES)
         ret, frame = cap.read()
         if not ret:
             break
         if frame_id % math.floor(frame_rate) == 0:
-            ts = cap.get(cv2.CAP_PROP_POS_MSEC)
+            # 시간은 의미 없음 frame 넘버와 frame rate으로 시간이 결정됨
+            # ts = cap.get(cv2.CAP_PROP_POS_MSEC)
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             frame_resized = cv2.resize(frame_rgb, (width, height),
                                        interpolation=cv2.INTER_LINEAR)
             img_for_detect = darknet.make_image(width, height, 3)
             darknet.copy_image_from_bytes(
                 img_for_detect, frame_resized.tobytes())
-            single_image_queue.put((frame_id, ts, img_for_detect))
+            single_image_queue.put((frame_id, img_for_detect))
     cap.release()
 
 
