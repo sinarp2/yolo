@@ -11,8 +11,12 @@ WORKDIR /src
 #RUN git checkout 4c315ea26b56c2bf20ebc240d94386c6e3cc83db
 RUN git clone https://github.com/AlexeyAB/darknet.git
 WORKDIR /src/darknet
+# RUN sed -i -e "s!OPENMP=0!OPENMP=1!g" Makefile && \
+#     sed -i -e "s!OPENCV=0!OPENCV=1!g" Makefile && \
+#     sed -i -e "s!AVX=0!AVX=1!g" Makefile && \
+#     sed -i -e "s!LIBSO=0!LIBSO=1!g" Makefile && \
+#     make
 RUN sed -i -e "s!OPENMP=0!OPENMP=1!g" Makefile && \
-    sed -i -e "s!OPENCV=0!OPENCV=1!g" Makefile && \
     sed -i -e "s!AVX=0!AVX=1!g" Makefile && \
     sed -i -e "s!LIBSO=0!LIBSO=1!g" Makefile && \
     make
