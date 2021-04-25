@@ -47,8 +47,8 @@ def series(series_queue):
 
 def inference(single_image_queue, series_queue):
     prev_objects = 0
-    def sqt(x): return x * x
-    def log(x): return x if x == 0 else math.log(sqt(x))
+    def sqr(x): return x * x
+    def log(x): return x if x == 0 else math.log(sqr(x))
     while cap.isOpened():
         frame_id, image = single_image_queue.get()  # 비어있는 경우 대기상태
         # prev_time = time.time()
@@ -74,8 +74,13 @@ def inference(single_image_queue, series_queue):
         # ts = int(ts / 1000)
         # ts = ts / 1000.0
         frame_id = int(frame_id)
-        print('frame: {:<4} objects: {:<4} diff: {:<4}'.format(
-            frame_id, curr_objects, log(balance)))
+        if sqr(balance) > 0:
+            print('frame: {:<4} objects: {:<4} diff: {:<4} -> 변화감지'.format(
+                frame_id, curr_objects, balance))
+        else:
+            print('frame: {:<4} objects: {:<4} diff: {:<4}'.format(
+                frame_id, curr_objects, balance))
+
         series_queue.append((curr_objects, log(balance), frame_id))
 
         # fps = int(1/(time.time() - prev_time))
@@ -88,7 +93,7 @@ def inference(single_image_queue, series_queue):
 
 def video_capture(single_image_queue):
     frame_rate = cap.get(cv2.CAP_PROP_FPS)
-    frame_rate = frame_rate / 3
+    # frame_rate = frame_rate / 3
     while cap.isOpened():
         # 프레임을 읽기 전 프레임 위치는 -> 0
         # 프레임을 읽고 난 후 프레임 위치는 -> 1
