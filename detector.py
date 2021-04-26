@@ -68,13 +68,9 @@ def inference(single_image_queue, series_queue):
         curr_objects = len(predictions)
         balance = curr_objects - prev_objects
         prev_objects = curr_objects
-        if frame_id == 0:
-            # 첫 프레임은 비교 대상이 없으므로 스킵
-            continue
-        # ts = int(ts / 1000)
-        # ts = ts / 1000.0
         frame_id = int(frame_id)
-        if sqr(balance) > 0:
+
+        if sqr(balance) > 0 and frame_id > 0:
             print('frame: {:<4} objects: {:<4} diff: {:<4} -> 변화감지'.format(
                 frame_id, curr_objects, balance))
         else:
