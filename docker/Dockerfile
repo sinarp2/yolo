@@ -20,6 +20,8 @@ RUN sed -i -e "s!OPENMP=0!OPENMP=1!g" Makefile && \
 
 # App image:
 FROM ubuntu:18.04
+ENV LC_ALL=C.UTF-8 LANG=C.UTF-8 \
+    DARKNET_PATH=/app PYTHONPATH=/app
 
 # Bare-bones python install
 RUN sed -i 's/archive.ubuntu.com/mirror.kakao.com/g' /etc/apt/sources.list && \
@@ -37,4 +39,3 @@ COPY --from=build /src/darknet/libdarknet.so .
 COPY --from=build /src/darknet/darknet.py .
 COPY --from=build /src/darknet/cfg cfg/
 COPY --from=build /src/darknet/data data/
-ENV DARKNET_PATH=/app PYTHONPATH=/app
